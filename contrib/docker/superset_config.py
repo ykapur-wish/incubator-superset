@@ -56,3 +56,20 @@ class CeleryConfig(object):
 
 
 CELERY_CONFIG = CeleryConfig
+
+#### CONFIGURING QUERY LOGGER
+import time
+
+def QUERY_LOGGER(
+ database,
+ query,
+ schema=None,
+ user=None,
+ client=None,
+ security_manager=None,
+):
+    curr_time = int(time.time())
+
+    csv_row = "{}, '{}', '{}', '{}', '{}', '{}'\n".format(curr_time, database, query.replace("\n", " "), schema, user, client)
+    with open("/data/query_logs.csv", "a") as ql:
+        ql.write(csv_row)
