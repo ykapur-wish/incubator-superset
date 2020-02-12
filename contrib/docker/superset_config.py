@@ -56,3 +56,55 @@ class CeleryConfig(object):
 
 
 CELERY_CONFIG = CeleryConfig
+
+##### ENABLE EMAIL REPORTS
+EMAIL_NOTIFICATIONS = True
+ENABLE_SCHEDULED_EMAIL_REPORTS = True
+
+from celery.schedules import crontab
+from werkzeug.contrib.cache import RedisCache
+RESULTS_BACKEND = RedisCache(
+    host='localhost', port=6379, key_prefix='superset_results'
+)
+
+class CeleryConfig(object):
+    BROKER_URL = 'redis://redis:6379/0'
+    CELERY_IMPORTS = (
+        'superset.sql_lab',
+        'superset.tasks',
+    )
+    CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+    CELERYD_LOG_LEVEL = 'DEBUG'
+    CELERYD_PREFETCH_MULTIPLIER = 10
+    CELERY_ACKS_LATE = True
+    CELERY_ANNOTATIONS = {
+        'sql_lab.get_sql_results': {
+            'rate_limit': '100/s',
+        },
+        'email_reports.send': {
+            'rate_limit': '1/s',
+            'time_limit': 120,
+            'soft_time_limit': 150,
+            'ignore_result': True,
+        },
+    }
+    CELERYBEAT_SCHEDULE = {
+        'email_reports.schedule_hourly': {
+            'task': 'email_reports.schedule_hourly',
+            # schedule for beat to run at the top of every hour
+            'schedule': crontab(minute=1, hour='*'),
+        },
+    }
+
+CELERY_CONFIG = CeleryConfig
+EMAIL_NOTIFICATIONS = True
+
+SMTP_HOST = "smtp.gmail.com"
+SMTP_STARTTLS = True
+SMTP_SSL = False
+SMTP_USER = ""
+SMTP_PORT = 25
+SMTP_PASSWORD = ""
+SMTP_MAIL_FROM = "superset@wish.com"
+
+WEBDRIVER_BASEURL = "http://localhost:8088"

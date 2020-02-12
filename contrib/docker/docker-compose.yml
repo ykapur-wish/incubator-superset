@@ -64,6 +64,33 @@ services:
       # this is needed for development, remove with SUPERSET_ENV=production
       - ../../superset:/home/superset/superset
 
+  beat:
+    build:
+        context: ../../
+        dockerfile: contrib/docker/Beatfile
+    command: ["celery", "beat", "--app=superset.tasks.celery_app:app", "-l", "debug"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: superset
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: superset
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # If using production, comment development volume below
+      #SUPERSET_ENV: production
+      SUPERSET_ENV: development
+    user: root:root
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      # this is needed to communicate with the postgres and redis services
+      - ./superset_config.py:/home/superset/superset/superset_config.py
+      # this is needed for development, remove with superset_env=production
+      - ../../superset:/home/superset/superset
+
 volumes:
   postgres:
     external: false
