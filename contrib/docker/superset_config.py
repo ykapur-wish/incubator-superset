@@ -59,6 +59,7 @@ CELERY_CONFIG = CeleryConfig
 
 #### CONFIGURING QUERY LOGGER
 import time
+from datetime import datetime
 
 def QUERY_LOGGER(
  database,
@@ -70,6 +71,16 @@ def QUERY_LOGGER(
 ):
     curr_time = int(time.time())
 
-    csv_row = "{}, '{}', '{}', '{}', '{}', '{}'\n".format(curr_time, database, query.replace("\n", " "), schema, user, client)
-    with open("/data/query_logs.csv", "a") as ql:
+    csv_row = "{}, '{}', '{}', '{}', '{}', '{}'\n".format(
+            curr_time,
+            database,
+            query.replace("\n", " "),
+            schema,
+            user,
+            client
+        )
+
+    date_str = str(datetime.now().date()).replace('-', '_')
+    filepath = "/data/{}_query_logs.csv".format(date_str)
+    with open(filepath, "a") as ql:
         ql.write(csv_row)

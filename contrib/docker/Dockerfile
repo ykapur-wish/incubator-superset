@@ -57,7 +57,6 @@ ENV PATH=/home/superset/superset/bin:$PATH \
     PYTHONPATH=/home/superset/superset/:$PYTHONPATH
 
 RUN mkdir /data
-RUN echo "time, database_uri, query, schema, user, client" > /data/query_logs.csv
 
 USER superset
 
