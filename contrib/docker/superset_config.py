@@ -81,6 +81,6 @@ def QUERY_LOGGER(
         )
 
     date_str = str(datetime.now().date()).replace('-', '_')
-    filepath = "/data/{}_query_logs.csv".format(date_str)
+    filepath = "/data/query_logs_{}.csv".format(date_str)
     with open(filepath, "a") as ql:
         ql.write(csv_row)
