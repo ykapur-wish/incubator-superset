@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 import os
+import json
 
 
 def get_env_variable(var_name, default=None):
@@ -29,12 +30,28 @@ def get_env_variable(var_name, default=None):
                         .format(var_name)
             raise EnvironmentError(error_msg)
 
+def read_vault():
+    """Reads the vault json dump and extracts the variable"""
+    vault_file = '/vault/secrets.json'
+    secret_string = open(vault_file).read()
+    secrets = json.loads(secret_string)
 
-POSTGRES_USER = get_env_variable('POSTGRES_USER')
-POSTGRES_PASSWORD = get_env_variable('POSTGRES_PASSWORD')
-POSTGRES_HOST = get_env_variable('POSTGRES_HOST')
-POSTGRES_PORT = get_env_variable('POSTGRES_PORT')
-POSTGRES_DB = get_env_variable('POSTGRES_DB')
+    return secrets
+
+# Read vault secrets into constant
+VAULT_SECRETS = read_vault()
+
+# POSTGRES_USER = get_env_variable('POSTGRES_USER')
+# POSTGRES_PASSWORD = get_env_variable('POSTGRES_PASSWORD')
+# POSTGRES_HOST = get_env_variable('POSTGRES_HOST')
+# POSTGRES_PORT = get_env_variable('POSTGRES_PORT')
+# POSTGRES_DB = get_env_variable('POSTGRES_DB')
+
+POSTGRES_USER = VAULT_SECRETS['POSTGRES_USER']
+POSTGRES_PASSWORD = VAULT_SECRETS['POSTGRES_PASSWORD']
+POSTGRES_HOST = VAULT_SECRETS['POSTGRES_HOST']
+POSTGRES_PORT = VAULT_SECRETS['POSTGRES_PORT']
+POSTGRES_DB = VAULT_SECRETS['POSTGRES_DB']
 
 # The SQLAlchemy connection string.
 SQLALCHEMY_DATABASE_URI = 'postgresql://%s:%s@%s:%s/%s' % (POSTGRES_USER,
