@@ -30,7 +30,9 @@ RUN apt-get install -y apt-transport-https apt-utils
 # Install superset dependencies
 # https://superset.incubator.apache.org/installation.html#os-dependencies
 RUN apt-get install -y build-essential libssl-dev \
-    libffi-dev python3-dev libsasl2-dev libldap2-dev libxi-dev
+    libffi-dev python3-dev libsasl2-modules libsasl2-dev libldap2-dev libxi-dev
+RUN pip install -e git://github.com/vinaybabunaidu/PyHive.git@0dbbfce255279995579e186d586084283801298b#egg=0.61_td_patch
+RUN pip install requests-kerberos==0.12.0
 
 # Install extra useful tool for development
 RUN apt-get install -y vim less postgresql-client redis-tools
@@ -50,6 +52,12 @@ COPY contrib/docker/requirements-extra.txt .
 RUN pip install --upgrade setuptools pip \
     && pip install -r requirements.txt -r requirements-dev.txt -r requirements-extra.txt \
     && rm -rf /root/.cache/pip
+
+# Setup mysql client
+RUN apt-get update && apt-get install -y  mariadb-client && rm -rf /var/lib/apt
+RUN pip install mysqlclient
+RUN pip install Flask-OAuthlib
+RUN pip install gevent
 
 COPY --chown=superset:superset superset superset
 

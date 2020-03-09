@@ -16,8 +16,9 @@
 # under the License.
 import os
 import json
+from celery.schedules import crontab
 
-
+# Function to get the environmental Variables
 def get_env_variable(var_name, default=None):
     """Get the environment variable or raise exception."""
     try:
@@ -30,46 +31,70 @@ def get_env_variable(var_name, default=None):
                         .format(var_name)
             raise EnvironmentError(error_msg)
 
+# Reading Credentials from Vault
 def read_vault():
     """Reads the vault json dump and extracts the variable"""
     vault_file = '/vault/secrets.json'
     secret_string = open(vault_file).read()
     secrets = json.loads(secret_string)
-
     return secrets
 
 # Read vault secrets into constant
 VAULT_SECRETS = read_vault()
 
-# POSTGRES_USER = get_env_variable('POSTGRES_USER')
-# POSTGRES_PASSWORD = get_env_variable('POSTGRES_PASSWORD')
-# POSTGRES_HOST = get_env_variable('POSTGRES_HOST')
-# POSTGRES_PORT = get_env_variable('POSTGRES_PORT')
-# POSTGRES_DB = get_env_variable('POSTGRES_DB')
+MYSQL_USER = VAULT_SECRETS['MYSQL_USER']
+MYSQL_PASSWORD = VAULT_SECRETS['MYSQL_PASSWORD']
+MYSQL_HOST = VAULT_SECRETS['MYSQL_HOST']
+MYSQL_PORT = VAULT_SECRETS['MYSQL_PORT']
+MYSQL_DB = VAULT_SECRETS['MYSQL_DB']
+REDIS_HOST = VAULT_SECRETS['REDIS_HOST']
+REDIS_PORT = VAULT_SECRETS['REDIS_PORT']
 
-POSTGRES_USER = VAULT_SECRETS['POSTGRES_USER']
-POSTGRES_PASSWORD = VAULT_SECRETS['POSTGRES_PASSWORD']
-POSTGRES_HOST = VAULT_SECRETS['POSTGRES_HOST']
-POSTGRES_PORT = VAULT_SECRETS['POSTGRES_PORT']
-POSTGRES_DB = VAULT_SECRETS['POSTGRES_DB']
+# Superset Webserver
+SUPERSET_WEBSERVER_TIMEOUT = 300
 
 # The SQLAlchemy connection string.
-SQLALCHEMY_DATABASE_URI = 'postgresql://%s:%s@%s:%s/%s' % (POSTGRES_USER,
-                                                           POSTGRES_PASSWORD,
-                                                           POSTGRES_HOST,
-                                                           POSTGRES_PORT,
-                                                           POSTGRES_DB)
+SQLALCHEMY_DATABASE_URI = 'mysql://%s:%s@%s:%s/%s' % (MYSQL_USER,
+                                                           MYSQL_PASSWORD,
+                                                           MYSQL_HOST,
+                                                           MYSQL_PORT,
+                                                           MYSQL_DB)
 
-REDIS_HOST = get_env_variable('REDIS_HOST')
-REDIS_PORT = get_env_variable('REDIS_PORT')
-
-
+# Celery Config
 class CeleryConfig(object):
     BROKER_URL = 'redis://%s:%s/0' % (REDIS_HOST, REDIS_PORT)
-    CELERY_IMPORTS = ('superset.sql_lab', )
+    CELERY_IMPORTS = ('superset.sql_lab', 'superset.tasks')
     CELERY_RESULT_BACKEND = 'redis://%s:%s/1' % (REDIS_HOST, REDIS_PORT)
-    CELERY_ANNOTATIONS = {'tasks.add': {'rate_limit': '10/s'}}
+    CELERYD_LOG_LEVEL = 'DEBUG'
     CELERY_TASK_PROTOCOL = 1
-
+    CELERYD_PREFETCH_MULTIPLIER = 10
+    CELERY_ACKS_LATE = False
+    CELERY_ANNOTATIONS = {
+        "sql_lab.get_sql_results": {"rate_limit": "100/s"},
+        "email_reports.send": {
+            "rate_limit": "1/s",
+            "time_limit": 120,
+            "soft_time_limit": 150,
+            "ignore_result": True,
+        },
+    }
+    CELERYBEAT_SCHEDULE = {
+        "email_reports.schedule_hourly": {
+            "task": "email_reports.schedule_hourly",
+            "schedule": crontab(minute=1, hour="*"),
+        }
+    }
 
 CELERY_CONFIG = CeleryConfig
+
+# Caching Config
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
+    'CACHE_DEFAULT_TIMEOUT': 60 * 60 * 24, # 1 day default (in secs)
+    'CACHE_KEY_PREFIX': 'superset_results',
+    'CACHE_REDIS_URL': 'redis://localhost:6379/0',
+}
+
+# On Redis
+from werkzeug.contrib.cache import RedisCache
+RESULTS_BACKEND = RedisCache(host='localhost', port=6379, key_prefix='superset_results')
