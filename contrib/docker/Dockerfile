@@ -73,6 +73,7 @@ RUN cd superset/assets \
 
 COPY contrib/docker/docker-init.sh .
 COPY contrib/docker/docker-entrypoint.sh /entrypoint.sh
+COPY superset/superset_config.py superset/
 ENTRYPOINT ["/entrypoint.sh"]
 
 HEALTHCHECK CMD ["curl", "-f", "http://localhost:8088/health"]
