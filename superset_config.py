@@ -98,6 +98,3 @@ CACHE_CONFIG = {
 # On Redis
 from werkzeug.contrib.cache import RedisCache
 RESULTS_BACKEND = RedisCache(host='localhost', port=6379, key_prefix='superset_results')
-
-# To allow Tahoe-Presto 
-RESULTS_BACKEND_USE_MSGPACK = False
