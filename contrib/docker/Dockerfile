@@ -55,9 +55,7 @@ RUN pip install --upgrade setuptools pip \
 
 # Setup mysql client
 RUN apt-get update && apt-get install -y  mariadb-client && rm -rf /var/lib/apt
-RUN pip install mysqlclient
-RUN pip install Flask-OAuthlib
-RUN pip install gevent
+RUN pip install mysqlclient Flask-OAuthlib gevent sasl==0.2.1 thrift==0.10.0 thrift-sasl==0.3.0
 
 COPY --chown=superset:superset superset superset
 
