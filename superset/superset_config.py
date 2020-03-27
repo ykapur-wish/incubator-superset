@@ -17,6 +17,11 @@
 import os
 import json
 from celery.schedules import crontab
+import logging
+from flask_appbuilder.security.manager import AUTH_OAUTH
+
+logging.getLogger('requests').setLevel(logging.CRITICAL)
+logging.getLogger('werkzeug').setLevel(logging.CRITICAL)
 
 # Function to get the environmental Variables
 def get_env_variable(var_name, default=None):
@@ -49,6 +54,10 @@ MYSQL_PORT = VAULT_SECRETS['MYSQL_PORT']
 MYSQL_DB = VAULT_SECRETS['MYSQL_DB']
 REDIS_HOST = VAULT_SECRETS['REDIS_HOST']
 REDIS_PORT = VAULT_SECRETS['REDIS_PORT']
+
+OKTA_KEY = VAULT_SECRETS['OKTA_KEY']
+OKTA_SECRET = VAULT_SECRETS['OKTA_SECRET']
+OKTA_BASE_URL = VAULT_SECRETS['OKTA_BASE_URL']
 
 # Superset Webserver
 SUPERSET_WEBSERVER_TIMEOUT = 300
@@ -101,3 +110,75 @@ RESULTS_BACKEND = RedisCache(host='localhost', port=6379, key_prefix='superset_r
 
 # To allow Tahoe-Presto 
 RESULTS_BACKEND_USE_MSGPACK = False
+
+
+# ====== Start Okta Login ===========
+PUBLIC_ROLE_LIKE_GAMMA = True
+
+AUTH_TYPE = AUTH_OAUTH
+AUTH_USER_REGISTRATION = True  # allow self-registration (login creates a user)
+AUTH_USER_REGISTRATION_ROLE = "Gamma"  # default is a Gamma user
+
+# OKTA_BASE_URL must be
+#    https://{yourOktaDomain}/oauth2/v1/ (okta authorization server)
+# Cannot be
+#    https://{yourOktaDomain}/oauth2/default/v1/ (custom authorization server)
+# Otherwise you won't be able to obtain Groups info.
+OAUTH_PROVIDERS = [{
+    'name':'wishid.okta',
+    'token_key': 'access_token', # Name of the token in the response of access_token_url
+    'icon':'fa-circle-o',   # Icon for the provider
+    'remote_app': {
+        'consumer_key': OKTA_KEY,  # Client Id (Identify Superset application)
+        'consumer_secret': OKTA_SECRET, # Secret for this Client Id (Identify Superset application)
+        'request_token_params': {
+            'scope': 'openid email profile groups'
+        },
+        'access_token_method': 'POST',    # HTTP Method to call access_token_url
+        'base_url': OKTA_BASE_URL,
+        'access_token_url': OKTA_BASE_URL + 'token',
+        'authorize_url': OKTA_BASE_URL + 'authorize'
+    }
+}]
+
+from superset.security import SupersetSecurityManager
+
+logger = logging.getLogger('okta_login')
+
+class CustomSsoSecurityManager(SupersetSecurityManager):
+
+    def oauth_user_info(self, provider, response=None):
+        if provider == 'wishid.okta':
+            res = self.appbuilder.sm.oauth_remotes[provider].get('userinfo')
+            if res.status != 200:
+                logger.error('Failed to obtain user info: %s', res.data)
+                return
+            me = res.data
+            logger.debug(" user_data: %s", me)
+            prefix = 'Superset'
+            groups = [
+                x.replace(prefix, '').strip() for x in me['groups']
+                if x.startswith(prefix)
+            ]
+            return {
+                'username' : me['preferred_username'],
+                'name' : me['name'],
+                'email' : me['email'],
+                'first_name': me['given_name'],
+                'last_name': me['family_name'],
+                # 'roles': groups, # TO-DO : Refactor AD groups and map to right role
+                'roles' : ['Admin']
+            }
+
+    def auth_user_oauth(self, userinfo):
+        user = super(CustomSsoSecurityManager, self).auth_user_oauth(userinfo)
+        roles = [self.find_role(x) for x in userinfo['roles']]
+        roles = [x for x in roles if x is not None]
+        user.roles = roles
+        logger.debug(' Update <User: %s> role to %s', user.username, roles)
+        self.update_user(user)  # update user roles
+        return user
+
+CUSTOM_SECURITY_MANAGER = CustomSsoSecurityManager
+
+# ====== End Okta Login ============
