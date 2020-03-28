@@ -111,6 +111,12 @@ RESULTS_BACKEND = RedisCache(host='localhost', port=6379, key_prefix='superset_r
 # To allow Tahoe-Presto 
 RESULTS_BACKEND_USE_MSGPACK = False
 
+# To add suffix of impersonated user
+from datetime import datetime
+def SQL_QUERY_MUTATOR(sql, username, security_manager, database):
+    dttm = datetime.now().isoformat()
+    formatted_query = f"{sql} \n-- [Superset] {username} {dttm}"
+    return formatted_query
 
 # ====== Start Okta Login ===========
 PUBLIC_ROLE_LIKE_GAMMA = True
