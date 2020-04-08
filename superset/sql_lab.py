@@ -210,6 +210,7 @@ def execute_sql_statement(sql_statement, query, user_name, session, cursor):
         sql = SQL_QUERY_MUTATOR(sql, user_name, security_manager, database)
 
     try:
+        query.executed_sql = sql
         if log_query:
             log_query(
                 query.database.sqlalchemy_uri,
@@ -219,7 +220,6 @@ def execute_sql_statement(sql_statement, query, user_name, session, cursor):
                 __name__,
                 security_manager,
             )
-        query.executed_sql = sql
         session.commit()
         with stats_timing("sqllab.query.time_executing_query", stats_logger):
             logging.info(f"Query {query_id}: Running query: \n{sql}")

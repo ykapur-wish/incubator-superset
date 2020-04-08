@@ -108,3 +108,28 @@ def SQL_QUERY_MUTATOR(sql, username, security_manager, database):
     dttm = datetime.now().isoformat()
     formatted_query = f"{sql} \n-- [Superset] {username} {dttm}"
     return formatted_query
+
+#### CONFIGURING QUERY LOGGER
+def QUERY_LOGGER(
+ database,
+ query,
+ schema=None,
+ user=None,
+ client=None,
+ security_manager=None,
+):
+    curr_time = int(time.time())
+
+    csv_row = "{}, '{}', '{}', '{}', '{}', '{}'\n".format(
+            curr_time,
+            database,
+            query.replace("\n", " "),
+            schema,
+            user,
+            client
+        )
+
+    date_str = str(datetime.now().date()).replace('-', '_')
+    filepath = "/data/query_logs_{}.csv".format(date_str)
+    with open(filepath, "a") as ql:
+        ql.write(csv_row)
