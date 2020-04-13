@@ -17,6 +17,8 @@
 import os
 import json
 from celery.schedules import crontab
+from datetime import datetime
+import time
 
 # Function to get the environmental Variables
 def get_env_variable(var_name, default=None):
@@ -103,7 +105,6 @@ RESULTS_BACKEND = RedisCache(host='localhost', port=6379, key_prefix='superset_r
 RESULTS_BACKEND_USE_MSGPACK = False
 
 # To add suffix of impersonated user
-from datetime import datetime
 def SQL_QUERY_MUTATOR(sql, username, security_manager, database):
     dttm = datetime.now().isoformat()
     formatted_query = f"{sql} \n-- [Superset] {username} {dttm}"
@@ -120,16 +121,30 @@ def QUERY_LOGGER(
 ):
     curr_time = int(time.time())
 
-    csv_row = "{}, '{}', '{}', '{}', '{}', '{}'\n".format(
-            curr_time,
+    csv_row = "'{}', '{}', '{}', '{}', '{}', '{}'\n".format(
+            str(curr_time),
             database,
             query.replace("\n", " "),
             schema,
             user,
             client
         )
-
+    
+    print(csv_row)
     date_str = str(datetime.now().date()).replace('-', '_')
     filepath = "/data/query_logs_{}.csv".format(date_str)
+
+    # if data directory doesn't exist, create it
+    if not os.path.isdir('/data/'):
+        os.mkdir('/data/')
+        print(csv_row)
+    
+    # if file does not exist, create it
+    if not os.path.isfile(filepath):
+        f = open(filepath, 'w+')
+        f.write("time, database, sql, schema, user, client\n")
+        f.close()
+
     with open(filepath, "a") as ql:
+        print(csv_row)
         ql.write(csv_row)
