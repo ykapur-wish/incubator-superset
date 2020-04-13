@@ -17,16 +17,13 @@
 import os
 import json
 from celery.schedules import crontab
-<<<<<<< HEAD
 from datetime import datetime
 import time
-=======
 import logging
 from flask_appbuilder.security.manager import AUTH_OAUTH
 
 logging.getLogger('requests').setLevel(logging.CRITICAL)
 logging.getLogger('werkzeug').setLevel(logging.CRITICAL)
->>>>>>> eb61d40defbce7a41b047a5e74c6bcb990fa494e
 
 # Function to get the environmental Variables
 def get_env_variable(var_name, default=None):
